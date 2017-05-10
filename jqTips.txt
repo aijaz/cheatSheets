@@ -1,0 +1,301 @@
+These are notes that I took while reading the jq docs. 
+
+Some of these notes are copied and pasted directly from the jq docs, to help me remember.
+
+jq is available at: https://stedolan.github.io/jq/
+
+
+.                         unchanged
+.foo                      value at key 'foo' or null
+".foo$"                   as above
+.foo.bar                  chaining allowed
+.foo?                     same as .foo but does not output even an error when . is not an array or an object
+.["foo"]                  same as .foo. .foo is a shortcut for this
+.[2]                      array index
+.[2:5]                    3-element slice
+.[]                       return all of the elements of an array (not as an array). Think of it as an iterator
+.[]?                      like .[], but without errors it it's not an array or object
+,                         first output of input fed to first filter, then output of input fed to second filter
+|                         output of first filter is input to second filter. 
+                          If the one on the left produces multiple results, the one on the right will be run for 
+                          each of those results. So, the expression .[] | .foo retrieves the “foo” field of each 
+                          element of the input array.
+
+Types and Values
+
+
+Array Construction - []
+
+You can use it to construct an array out of a known quantity of values (as in [.foo, .bar, .baz]) or to “collect” 
+all the results of a filter into an array (as in [.items[].name])
+
+Once you understand the “,” operator, you can look at jq’s array syntax in a different light: the 
+expression [1,2,3] is not using a built-in syntax for comma-separated arrays, but is instead 
+applying the [] operator (collect results) to the expression 1,2,3 (which produces three different results).
+
+If you have a filter X that produces four results, then the expression [X] will produce a single result, 
+an array of four elements.
+
+
+Objects - {}
+
+{foo: .bar}
+{foo: .foo, bar: .bar}
+{foo, bar}                 shortcut for above
+{(.foo): .bar}             evaluate .foo
+
+If one of the entries produces n results where n >= 0, then n hashes will be produced. 
+Think of this as a cross product
+
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"]}' | jq '{user, title: .titles[]}'
+{
+  "user": "stedolan",
+  "title": "JQ Primer"
+}
+{
+  "user": "stedolan",
+  "title": "More JQ"
+}
+
+echo '{"user":"stedolan","titles":[]}' | jq '{user, title: .titles[]}'
+<no data>
+
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"], "subtitles": []}' | jq '{user, title: .titles[], subtitles: .subtitles[]}'
+<no data>
+
+echo `echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"], "subtitles": ["s1"]}' | jq -jc  '{user, title: .titles[], subtitles: .subtitles[]}' `
+{"user":"stedolan","title":"JQ Primer","subtitles":"s1"}{"user":"stedolan","title":"More JQ","subtitles":"s1"}
+
+echo '{"user":"stedolan","titles":["JQ Primer", "More JQ"], "subtitles": ["s1", "s2", "s3"]}' | jq   '{user, title: .titles[], subtitles: .subtitles[]}'
+< 6 hashes : (1 * 2 * 3) >
+
+
+Functions
+
+o +  For arrays, strings, ints, objects
+o -  For ints or arrays
+o *  Int,int   string,int  or  obj,obj (recursive merge)
+o /,% int
+o length
+o keys
+o has("foo")
+o in({"a": "b"})
+o map(x), map_values(x)      
+  map(x) is equivalent to [.[] | x]. In fact, this is how it’s defined. Similarly, map_values(x) is defined as .[] |= x.
+  echo '[1,2,3]' | jq 'map(.+2)'  # [3,4,5]
+  echo '{"a": 1, "b": 2, "c": 3}' | jq 'map_values(.*10)'  # {"a":10,"b":20,"c":30}                    
+o path(path_expression)  - not sure what this is useful for yet
+o del(path_expression) - remove the key and value
+o select(func) - like grep where func is true
+  cat /tmp/1 | jq '.[]|select(.children|length == 4)' # all people with 4 kids
+  cat /tmp/1 | jq '[.[]|select(.children|length == 4)|.name]' # array of names of all people with 4 kids
+o arrays, objects, iterables, booleans, numbers, normals, finites, strings, nulls, values, scalars: only return these types
+o empty - return nothing
+o paths, paths(scalars) - show all or matching paths (scalars => leaves)
+o add  Add the elements in an array
+o flatten/flatten(depth) # echo '[1,[2,3]]' | jq -c 'flatten' => [1,2,3]
+o range(upto), range(from;upto) range(from;upto;by)
+o contains()/inside()
+o 
+
+
+cat <<EOF >! /tmp/1
+[
+  {
+    "name": "Alice", 
+    "children": [
+      { "sex": "M", "name":  "Eddie" }, { "sex": "M", "name":  "Frank"}, { "sex": "F", "name":  "Gerta"}, { "sex": "M", "name":  "Henry"}
+    ]
+  }
+  ,{
+    "name": "Betty", 
+    "children": [
+      { "sex": "F", "name":  "Irene" }, { "sex": "M", "name":  "James"}, { "sex": "M", "name":  "Kevin"}, { "sex": "F", "name":  "Laura"}
+    ]
+  }
+  ,{
+    "name": "Carol", 
+    "children": [
+      { "sex": "M", "name":  "Marty" }, { "sex": "M", "name":  "Nitin"}, { "sex": "M", "name":  "Ollie"}
+    ]
+  }
+  ,{
+    "name": "Dinah", 
+    "children": [
+      { "sex": "F", "name":  "Paula" }, { "sex": "F", "name":  "Quill"}
+    ]
+  }
+]
+EOF
+
+$ cat /tmp/1 | jq '.[]|.name' # for each item give me the name
+"Alice"
+"Betty"
+"Carol"
+"Dinah"
+
+$ cat /tmp/1 | jq '[.[]|.name]' # same as above, but encapsulate it all in an array
+[
+  "Alice",
+  "Betty",
+  "Carol",
+  "Dinah"
+]
+
+$ cat /tmp/1 | jq '[.[]|{name, firstBorn: .children[0].name}]' # Give me first borns of everyone
+[
+  {
+    "name": "Alice",
+    "firstBorn": "Eddie"
+  },
+  {
+    "name": "Betty",
+    "firstBorn": "Irene"
+  },
+  {
+    "name": "Carol",
+    "firstBorn": "Marty"
+  },
+  {
+    "name": "Dinah",
+    "firstBorn": "Paula"
+  }
+]
+
+$ cat /tmp/1 | jq '[.[]|{name, firstBorn: .children[0].name, sex: .children[0].sex}]' # firstborn and sex
+[
+  {
+    "name": "Alice",
+    "firstBorn": "Eddie",
+    "sex": "M"
+  },
+  {
+    "name": "Betty",
+    "firstBorn": "Irene",
+    "sex": "F"
+  },
+  {
+    "name": "Carol",
+    "firstBorn": "Marty",
+    "sex": "M"
+  },
+  {
+    "name": "Dinah",
+    "firstBorn": "Paula",
+    "sex": "F"
+  }
+]
+
+cat /tmp/1 | jq '[.[]|{name, firstBorn: [.children[0]|.name,.sex]}]' # firstborn and sex as an array
+[
+  {
+    "name": "Alice",
+    "firstBorn": [
+      "Eddie",
+      "M"
+    ]
+  },
+  {
+    "name": "Betty",
+    "firstBorn": [
+      "Irene",
+      "F"
+    ]
+  },
+  {
+    "name": "Carol",
+    "firstBorn": [
+      "Marty",
+      "M"
+    ]
+  },
+  {
+    "name": "Dinah",
+    "firstBorn": [
+      "Paula",
+      "F"
+    ]
+  }
+]
+
+
+$ cat /tmp/1 | jq '[.[]|{(.name): .children|length}]' # home many kids does each one have
+[
+  {
+    "Alice": 4
+  },
+  {
+    "Betty": 4
+  },
+  {
+    "Carol": 3
+  },
+  {
+    "Dinah": 2
+  }
+]
+
+$ cat /tmp/1 | jq '[.[]|.name, (.children|length)] '
+[
+  "Alice",
+  4,
+  "Betty",
+  4,
+  "Carol",
+  3,
+  "Dinah",
+  2
+]
+
+$ cat /tmp/1 | jq '[.[]|[.name, (.children|length)] ] '
+[
+  [
+    "Alice",
+    4
+  ],
+  [
+    "Betty",
+    4
+  ],
+  [
+    "Carol",
+    3
+  ],
+  [
+    "Dinah",
+    2
+  ]
+]
+
+$ cat /tmp/1 | jq '[.[]|[.name, (.children|length)] ]|transpose '
+[
+  [
+    "Alice",
+    "Betty",
+    "Carol",
+    "Dinah"
+  ],
+  [
+    4,
+    4,
+    3,
+    2
+  ]
+]
+
+$ cat /tmp/1 | jq '[.[]|[.name, (.children|length)] ]|transpose | .[0] as $keys | .[1] as $values | reduce range(0; $keys|length) as $i  ( {}; . + { ($keys[$i]): $values[$i] }) '
+{
+  "Alice": 4,
+  "Betty": 4,
+  "Carol": 3,
+  "Dinah": 2
+}
+
+$ cat /tmp/1 | jq '[.[]|[.name, (.children|length)] ] | reduce .[] as $i ({}; . + { ($i[0]): $i[1]} )'
+{
+  "Alice": 4,
+  "Betty": 4,
+  "Carol": 3,
+  "Dinah": 2
+}
+
