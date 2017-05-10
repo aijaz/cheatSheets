@@ -2,19 +2,23 @@ tmux Cheatsheet
 
 # Starting
 
-* `tmux`
-* `tmux new-session -s basic` Create a session named basic
-* `tmux new -s basic` Create a session named basic
+* `$ tmux`
+* `$ tmux new-session -s basic` Create a session named basic
+* `$ tmux new -s basic` Create a session named basic
 
 # Sessions
 
 * `__PREFIX__ d` detach from our tmux session
-* `tmux list-sessions` or `tmux ls` List sessions
-* `tmux attach` Attach to our session
-* `tmux new -s second_session -d` Create a new session and detach it immediately
-* `tmux attach -d second_session` Attach to named session
-* `tmux kill-session -t basic` Kill session named basic
-* `tmux new -s windows -n shell` Create a session name "windows" and name the first window "shell"
+* `$ tmux list-sessions` or `tmux ls` List sessions
+* `$ tmux attach` Attach to our session
+* `$ tmux new -s second_session -d` Create a new session and detach it immediately
+* `$ tmux attach -d second_session` Attach to named session
+* `$ tmux kill-session -t basic` Kill session named basic
+* `$ tmux new -s windows -n shell` Create a session name "windows" and name the first window "shell"
+* `__PREFIX__ s` Select sessions. Use the right arrow to select specific windows
+* `__PREFIX__ (` Switch to previous session
+* `__PREFIX__ )` Switch to next session
+* `__PREFIX__ $` Rename session
 
 # Windows
 
@@ -32,6 +36,7 @@ tmux Cheatsheet
 * `__PREFIX__ "` Split window horizontally
 * `__PREFIX__ o` Cycle through panes
 * `__PREFIX__ UP, DOWN, LEFT, RIGHT` Move around the panes
+* `__PREFIX__ Cntrl-UP/DOWN/LEFT/RIGHT` Resize pane. Repeatable
 * `__PREFIX__ SPACE` Cycle through default layouts
 * `__PREFIX__ x` Kill pane - useful if you can't communicate with the process.
 
@@ -53,7 +58,7 @@ tmux Cheatsheet
 
 # Working with text
 
-* `__PREFIX__ [` to enter copy mode, `ESC` to exit. Emacs bindings to select and copy. 
+* `__PREFIX__ [` to enter copy mode, `ESC` to exit. Emacs bindings to select and copy. Vi mode also possible.
 
 # Workflow
 
